@@ -8,6 +8,8 @@ import android.support.v4.app.FragmentManager;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.TextView;
@@ -40,33 +42,13 @@ import rx.subscriptions.CompositeSubscription;
 
 public class PaymentActivity extends StripeAndroidPayActivity {
 
-    private static final String EXTRA_EMOJI_INT = "EXTRA_EMOJI_INT";
-    private static final String EXTRA_PRICE = "EXTRA_PRICE";
-    private static final String EXTRA_CURRENCY = "EXTRA_CURRENCY";
-
     private static final String EXTRA_CART = "EXTRA_CART";
 
     private CardInputWidget mCardInputWidget;
-    private CartManager mCartManager;
     private CompositeSubscription mCompositeSubscription;
-    private Currency mCurrency;
-    private int mEmojiUnicode;
-    private TextView mEmojiView;
-    private long mPrice;
     private ProgressDialogFragment mProgressDialogFragment;
+    private ShoppingCartAdapter mShoppingCartAdapter;
     private Stripe mStripe;
-
-    public static Intent createIntent(
-            @NonNull Context context,
-            int emojiUnicode,
-            long price,
-            @NonNull Currency currency) {
-        Intent intent = new Intent(context, PaymentActivity.class);
-        intent.putExtra(EXTRA_EMOJI_INT, emojiUnicode);
-        intent.putExtra(EXTRA_PRICE, price);
-        intent.putExtra(EXTRA_CURRENCY, currency);
-        return intent;
-    }
 
     public static Intent createIntent(@NonNull Context context, @NonNull Cart cart) {
         Intent intent = new Intent(context, PaymentActivity.class);
@@ -89,52 +71,35 @@ public class PaymentActivity extends StripeAndroidPayActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_payment);
 
-        mEmojiView = (TextView) findViewById(R.id.tv_emoji_display);
-
         Bundle extras = getIntent().getExtras();
-        if (extras.containsKey(EXTRA_CART)) {
-            Cart cart = extras.getParcelable(EXTRA_CART);
-            mCartManager = new CartManager(cart);
-            Long price = mCartManager.calculateRegularItemTotal();
-            if (price == null) {
-                mPrice = 0L;
-            } else {
-                mPrice = price;
-            }
-
-            mCurrency = Currency.getInstance(mCartManager.getCurrencyCode());
-            if (cart.getLineItems() != null && !cart.getLineItems().isEmpty()) {
-                LineItem first = cart.getLineItems().get(0);
-                String emojiDescription = first.getDescription();
-                mEmojiUnicode = (int) emojiDescription.charAt(0);
-                mEmojiView.setText(emojiDescription);
-            }
-
-        } else {
-            mEmojiUnicode = getIntent().getExtras().getInt(EXTRA_EMOJI_INT);
-            mPrice = getIntent().getExtras().getLong(EXTRA_PRICE);
-            mCurrency = (Currency) getIntent().getExtras().getSerializable(EXTRA_CURRENCY);
-            mEmojiView.setText(StoreUtils.getEmojiByUnicode(mEmojiUnicode));
-        }
+        Cart cart = extras.getParcelable(EXTRA_CART);
+        ItemDivider dividerDecoration = new ItemDivider(this, R.drawable.item_divider);
+        RecyclerView.LayoutManager linearLayoutManager = new LinearLayoutManager(this);
+        RecyclerView recyclerView = (RecyclerView) findViewById(R.id.rv_payment);
+        recyclerView.setHasFixedSize(true);
+        recyclerView.setLayoutManager(linearLayoutManager);
+        recyclerView.addItemDecoration(dividerDecoration);
+        mShoppingCartAdapter = new ShoppingCartAdapter(cart);
+        recyclerView.setAdapter(mShoppingCartAdapter);
 
 
-        TextView priceDisplay = (TextView) findViewById(R.id.tv_price_display);
-        priceDisplay.setText(StoreUtils.getPriceString(mPrice, mCurrency));
+//        TextView priceDisplay = (TextView) findViewById(R.id.tv_price_display);
+//        priceDisplay.setText(StoreUtils.getPriceString(mPrice, mCurrency));
         mCompositeSubscription = new CompositeSubscription();
 
         mCardInputWidget = (CardInputWidget) findViewById(R.id.card_input_widget);
         mProgressDialogFragment =
                 ProgressDialogFragment.newInstance(R.string.completing_purchase);
         Button payButton = (Button) findViewById(R.id.btn_purchase);
-        payButton.setText(String.format(Locale.ENGLISH,
-                "Pay %s", StoreUtils.getPriceString(mPrice, null)));
-        RxView.clicks(payButton)
-                .subscribe(new Action1<Void>() {
-                    @Override
-                    public void call(Void aVoid) {
-                        attemptPurchase();
-                    }
-                });
+//        payButton.setText(String.format(Locale.ENGLISH,
+//                "Pay %s", StoreUtils.getPriceString(mPrice, null)));
+//        RxView.clicks(payButton)
+//                .subscribe(new Action1<Void>() {
+//                    @Override
+//                    public void call(Void aVoid) {
+//                        attemptPurchase();
+//                    }
+//                });
 
         mStripe = new Stripe(this);
     }
@@ -216,33 +181,33 @@ public class PaymentActivity extends StripeAndroidPayActivity {
     private void completePurchase(Source source) {
         Retrofit retrofit = RetrofitFactory.getInstance();
         StripeService stripeService = retrofit.create(StripeService.class);
-        Observable<Void> stripeResponse = stripeService.createQueryCharge(mPrice, source.getId());
+//        Observable<Void> stripeResponse = stripeService.createQueryCharge(mPrice, source.getId());
 
-        mCompositeSubscription.add(stripeResponse
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .doOnUnsubscribe(
-                        new Action0() {
-                            @Override
-                            public void call() {
-                                if (mProgressDialogFragment != null) {
-                                    mProgressDialogFragment.dismiss();
-                                }
-                            }
-                        })
-                .subscribe(
-                    new Action1<Void>() {
-                        @Override
-                        public void call(Void aVoid) {
-                            finishCharge();
-                        }
-                    },
-                    new Action1<Throwable>() {
-                        @Override
-                        public void call(Throwable throwable) {
-                            displayError(throwable.getLocalizedMessage());
-                        }
-                    }));
+//        mCompositeSubscription.add(stripeResponse
+//                .subscribeOn(Schedulers.io())
+//                .observeOn(AndroidSchedulers.mainThread())
+//                .doOnUnsubscribe(
+//                        new Action0() {
+//                            @Override
+//                            public void call() {
+//                                if (mProgressDialogFragment != null) {
+//                                    mProgressDialogFragment.dismiss();
+//                                }
+//                            }
+//                        })
+//                .subscribe(
+//                    new Action1<Void>() {
+//                        @Override
+//                        public void call(Void aVoid) {
+//                            finishCharge();
+//                        }
+//                    },
+//                    new Action1<Throwable>() {
+//                        @Override
+//                        public void call(Throwable throwable) {
+//                            displayError(throwable.getLocalizedMessage());
+//                        }
+//                    }));
     }
 
     private void displayError(String errorMessage) {
@@ -259,8 +224,8 @@ public class PaymentActivity extends StripeAndroidPayActivity {
     }
 
     private void finishCharge() {
-        Intent data = StoreActivity.createPurchaseCompleteIntent(mEmojiUnicode, mPrice);
-        setResult(RESULT_OK, data);
+//        Intent data = StoreActivity.createPurchaseCompleteIntent(mEmojiUnicode, mPrice);
+//        setResult(RESULT_OK, data);
         finish();
     }
 
@@ -268,7 +233,7 @@ public class PaymentActivity extends StripeAndroidPayActivity {
         InputMethodManager inputManager =
                 (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
         inputManager.toggleSoftInput(0, 0);
-        mEmojiView.requestFocus();
+//        mEmojiView.requestFocus();
     }
 
 }

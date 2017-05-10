@@ -180,16 +180,6 @@ public class StoreAdapter extends RecyclerView.Adapter<StoreAdapter.ViewHolder> 
         return new ViewHolder(pollingView, mCurrency);
     }
 
-    private void launchPurchaseActivityForIndex(int index) {
-        Intent paymentLaunchIntent = PaymentActivity.createIntent(
-                mActivity,
-                EMOJI_CLOTHES[index],
-                EMOJI_PRICES[index],
-                mCurrency);
-        mActivity.startActivityForResult(
-                paymentLaunchIntent, StoreActivity.PURCHASE_REQUEST);
-    }
-
     public void launchPurchaseActivityWithCart() {
         // Generating a CartManager using the current currency in my AndroidPayConfiguration
         CartManager cartManager = new CartManager();

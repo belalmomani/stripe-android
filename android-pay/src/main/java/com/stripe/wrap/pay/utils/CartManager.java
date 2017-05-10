@@ -272,9 +272,9 @@ public class CartManager {
      * from the sum of the prices of the items within the cart.
      *
      * @param totalPrice a number representing the price, in the lowest possible denomination
-     *                   of the cart's currency
+     *                   of the cart's currency, or {@code null} to clear the value
      */
-    public void setTotalPrice(@NonNull Long totalPrice) {
+    public void setTotalPrice(@Nullable Long totalPrice) {
         mManualTotalPrice = totalPrice;
     }
 
@@ -373,11 +373,7 @@ public class CartManager {
                 totalLineItems,
                 mCurrency.getCurrencyCode());
 
-        Long totalPrice = mManualTotalPrice == null
-                ? getTotalPrice(totalLineItems, mCurrency)
-                : mManualTotalPrice;
-
-        String totalPriceString = totalPrice == null ? null : getPriceString(totalPrice, mCurrency);
+        String totalPriceString = getTotalPriceString();
 
         if (!TextUtils.isEmpty(totalPriceString)) {
             // If a manual value has been set for the total price string, then we don't need
@@ -396,18 +392,44 @@ public class CartManager {
         }
     }
 
+    @Nullable
+    public String getTotalPriceString() {
+        Long totalPrice = null;
+        if (mManualTotalPrice == null) {
+            Long[] sectionTotals = new Long[3];
+            sectionTotals[0] = calculateRegularItemTotal();
+            sectionTotals[1] = calculateShippingItemTotal();
+            sectionTotals[2] = calculateTax();
+            for (int i = 0; i < sectionTotals.length; i++) {
+                if (sectionTotals[i] == null) {
+                    continue;
+                }
+
+                if (totalPrice == null) {
+                    totalPrice = sectionTotals[i];
+                } else {
+                    totalPrice += sectionTotals[i];
+                }
+            }
+        } else {
+            totalPrice = mManualTotalPrice;
+        }
+
+        return totalPrice == null ? null : getPriceString(totalPrice, mCurrency);
+    }
+
     @NonNull
     public String getCurrencyCode() {
         return mCurrency.getCurrencyCode();
     }
 
     @NonNull
-    public Map<String, LineItem> getLineItemsRegular() {
+    public LinkedHashMap<String, LineItem> getLineItemsRegular() {
         return mLineItemsRegular;
     }
 
     @NonNull
-    public Map<String, LineItem> getLineItemsShipping() {
+    public LinkedHashMap<String, LineItem> getLineItemsShipping() {
         return mLineItemsShipping;
     }
 

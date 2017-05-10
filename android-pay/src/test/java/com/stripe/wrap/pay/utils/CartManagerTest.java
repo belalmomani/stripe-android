@@ -500,6 +500,26 @@ public class CartManagerTest {
         }
     }
 
+    @Test
+    public void getTotalPriceString_whenAllItemsPresent_returnsExpectedValue() {
+        AndroidPayConfiguration.getInstance().setCurrencyCode("JPY");
+        Cart startingCart = generateCartWithAllItems("JPY");
+        CartManager manager = new CartManager(startingCart, true, true);
+        manager.setTotalPrice(null);
+
+        assertEquals("10833", manager.getTotalPriceString());
+    }
+
+    @Test
+    public void getTotalPriceString_whenNoShippingOrTaxItems_returnsExpectedValue() {
+        AndroidPayConfiguration.getInstance().setCurrencyCode("KRW");
+        CartManager manager = new CartManager();
+        manager.addLineItem("First item", 200L);
+        manager.addLineItem("Second item", 300L);
+
+        assertEquals("500", manager.getTotalPriceString());
+    }
+
     private static void verifyLineItemsHaveExpectedValues(
             @NonNull Map<String, String> expectedDescriptionPriceMap,
             @NonNull List<LineItem> lineItems) {

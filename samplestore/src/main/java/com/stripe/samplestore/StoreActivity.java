@@ -21,7 +21,7 @@ public class StoreActivity
 
     // Put your publishable key here. It should start with "pk_test_"
     private static final String PUBLISHABLE_KEY =
-            "put your publishable key here";
+            "pk_test_9UVLd6CCQln8IhUSsmRyqQu4";
 
     static final int PURCHASE_REQUEST = 37;
 
@@ -51,12 +51,11 @@ public class StoreActivity
         RecyclerView recyclerView = (RecyclerView) findViewById(R.id.rv_store_items);
 
 
-        mGoToCartButton.setEnabled(false);
+        mGoToCartButton.hide();
         Toolbar myToolBar = (Toolbar) findViewById(R.id.my_toolbar);
         setSupportActionBar(myToolBar);
 
         RecyclerView.LayoutManager linearLayoutManager = new LinearLayoutManager(this);
-        recyclerView.setHasFixedSize(true);
         recyclerView.setLayoutManager(linearLayoutManager);
         recyclerView.addItemDecoration(dividerDecoration);
         recyclerView.setAdapter(mStoreAdapter);
@@ -85,9 +84,9 @@ public class StoreActivity
     @Override
     public void onTotalItemsChanged(int totalItems) {
         if (totalItems > 0) {
-            mGoToCartButton.setEnabled(true);
+            mGoToCartButton.show();
         } else {
-            mGoToCartButton.setEnabled(false);
+            mGoToCartButton.hide();
         }
     }
 

@@ -12,6 +12,9 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.TextView;
 
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.wallet.Cart;
+import com.google.android.gms.wallet.LineItem;
 import com.jakewharton.rxbinding.view.RxView;
 import com.stripe.android.Stripe;
 import com.stripe.android.model.Card;
@@ -19,6 +22,9 @@ import com.stripe.android.model.Source;
 import com.stripe.android.model.SourceCardData;
 import com.stripe.android.model.SourceParams;
 import com.stripe.android.view.CardInputWidget;
+import com.stripe.wrap.pay.AndroidPayConfiguration;
+import com.stripe.wrap.pay.activity.StripeAndroidPayActivity;
+import com.stripe.wrap.pay.utils.CartManager;
 
 import java.util.Currency;
 import java.util.Locale;
@@ -32,17 +38,16 @@ import rx.functions.Action1;
 import rx.schedulers.Schedulers;
 import rx.subscriptions.CompositeSubscription;
 
-public class PaymentActivity extends AppCompatActivity {
-
-    // Put your publishable key here. It should start with "pk_test_"
-    private static final String PUBLISHABLE_KEY =
-            "Put your test key here";
+public class PaymentActivity extends StripeAndroidPayActivity {
 
     private static final String EXTRA_EMOJI_INT = "EXTRA_EMOJI_INT";
     private static final String EXTRA_PRICE = "EXTRA_PRICE";
     private static final String EXTRA_CURRENCY = "EXTRA_CURRENCY";
 
+    private static final String EXTRA_CART = "EXTRA_CART";
+
     private CardInputWidget mCardInputWidget;
+    private CartManager mCartManager;
     private CompositeSubscription mCompositeSubscription;
     private Currency mCurrency;
     private int mEmojiUnicode;
@@ -63,17 +68,56 @@ public class PaymentActivity extends AppCompatActivity {
         return intent;
     }
 
+    public static Intent createIntent(@NonNull Context context, @NonNull Cart cart) {
+        Intent intent = new Intent(context, PaymentActivity.class);
+        intent.putExtra(EXTRA_CART, cart);
+        return intent;
+    }
+
+    @Override
+    protected void onAndroidPayAvailable() {
+
+    }
+
+    @Override
+    protected void onAndroidPayNotAvailable() {
+
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_payment);
 
-        mEmojiUnicode = getIntent().getExtras().getInt(EXTRA_EMOJI_INT);
         mEmojiView = (TextView) findViewById(R.id.tv_emoji_display);
-        mEmojiView.setText(StoreUtils.getEmojiByUnicode(mEmojiUnicode));
 
-        mPrice = getIntent().getExtras().getLong(EXTRA_PRICE);
-        mCurrency = (Currency) getIntent().getExtras().getSerializable(EXTRA_CURRENCY);
+        Bundle extras = getIntent().getExtras();
+        if (extras.containsKey(EXTRA_CART)) {
+            Cart cart = extras.getParcelable(EXTRA_CART);
+            mCartManager = new CartManager(cart);
+            Long price = mCartManager.calculateRegularItemTotal();
+            if (price == null) {
+                mPrice = 0L;
+            } else {
+                mPrice = price;
+            }
+
+            mCurrency = Currency.getInstance(mCartManager.getCurrencyCode());
+            if (cart.getLineItems() != null && !cart.getLineItems().isEmpty()) {
+                LineItem first = cart.getLineItems().get(0);
+                String emojiDescription = first.getDescription();
+                mEmojiUnicode = (int) emojiDescription.charAt(0);
+                mEmojiView.setText(emojiDescription);
+            }
+
+        } else {
+            mEmojiUnicode = getIntent().getExtras().getInt(EXTRA_EMOJI_INT);
+            mPrice = getIntent().getExtras().getLong(EXTRA_PRICE);
+            mCurrency = (Currency) getIntent().getExtras().getSerializable(EXTRA_CURRENCY);
+            mEmojiView.setText(StoreUtils.getEmojiByUnicode(mEmojiUnicode));
+        }
+
+
         TextView priceDisplay = (TextView) findViewById(R.id.tv_price_display);
         priceDisplay.setText(StoreUtils.getPriceString(mPrice, mCurrency));
         mCompositeSubscription = new CompositeSubscription();
@@ -119,7 +163,7 @@ public class PaymentActivity extends AppCompatActivity {
                     public Source call() throws Exception {
                         return mStripe.createSourceSynchronous(
                                 cardParams,
-                                PUBLISHABLE_KEY);
+                                AndroidPayConfiguration.getInstance().getPublicApiKey());
                     }
                 });
 

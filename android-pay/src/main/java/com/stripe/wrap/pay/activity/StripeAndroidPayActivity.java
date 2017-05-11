@@ -377,6 +377,7 @@ public abstract class StripeAndroidPayActivity extends AppCompatActivity
      *
      * @param fullWallet the {@link FullWallet} returned from Google Play Services
      */
+    @CallSuper
     protected void onFullWalletRetrieved(@Nullable FullWallet fullWallet) {
         if (fullWallet == null || fullWallet.getPaymentMethodToken() == null) {
             return;
@@ -389,6 +390,7 @@ public abstract class StripeAndroidPayActivity extends AppCompatActivity
 
         try {
             Token token = TokenParser.parseToken(rawPurchaseToken);
+            logApiCallOnNewThread(token, null);
             onStripePaymentSourceReturned(fullWallet, token);
         } catch (JSONException jsonException) {
             Log.i(TAG,
@@ -406,6 +408,7 @@ public abstract class StripeAndroidPayActivity extends AppCompatActivity
                         jsonException);
                 return;
             }
+            logApiCallOnNewThread(source, null);
             onStripePaymentSourceReturned(fullWallet, source);
         }
     }
@@ -540,11 +543,8 @@ public abstract class StripeAndroidPayActivity extends AppCompatActivity
      * @param paymentSource a {@link StripePaymentSource} that has an ID field that can be used
      *                      to make a charge
      */
-    @CallSuper
     protected void onStripePaymentSourceReturned(
-            FullWallet wallet, StripePaymentSource paymentSource) {
-        logApiCallOnNewThread(paymentSource, null);
-    }
+            FullWallet wallet, StripePaymentSource paymentSource) { }
 
     /*------ End Overrides ------*/
 

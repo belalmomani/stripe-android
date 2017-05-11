@@ -437,6 +437,11 @@ public class CartManager {
     }
 
     @NonNull
+    public Currency getCurrency() {
+        return mCurrency;
+    }
+
+    @NonNull
     public String getCurrencyCode() {
         return mCurrency.getCurrencyCode();
     }

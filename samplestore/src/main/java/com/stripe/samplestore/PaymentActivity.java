@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.annotation.Size;
 import android.support.v4.app.FragmentManager;
 import android.support.v7.app.AlertDialog;
@@ -22,6 +23,7 @@ import android.widget.TextView;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.wallet.Cart;
 import com.google.android.gms.wallet.LineItem;
+import com.google.android.gms.wallet.MaskedWallet;
 import com.jakewharton.rxbinding.view.RxView;
 import com.stripe.android.Stripe;
 import com.stripe.android.model.Card;
@@ -75,6 +77,16 @@ public class PaymentActivity extends StripeAndroidPayActivity {
     @Override
     protected void onAndroidPayNotAvailable() {
 
+    }
+
+    @Override
+    protected void onMaskedWalletRetrieved(@Nullable MaskedWallet maskedWallet) {
+        super.onMaskedWalletRetrieved(maskedWallet);
+    }
+
+    @Override
+    protected void onChangedMaskedWalletRetrieved(@Nullable MaskedWallet maskedWallet) {
+        super.onChangedMaskedWalletRetrieved(maskedWallet);
     }
 
     @Override

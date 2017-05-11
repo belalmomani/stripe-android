@@ -7,12 +7,16 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.annotation.Size;
 import android.support.v4.app.FragmentManager;
+import android.support.v4.app.FragmentTransaction;
+import android.support.v4.view.GravityCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.text.TextUtils;
+import android.transition.Slide;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
@@ -21,9 +25,12 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.identity.intents.model.UserAddress;
 import com.google.android.gms.wallet.Cart;
 import com.google.android.gms.wallet.LineItem;
 import com.google.android.gms.wallet.MaskedWallet;
+import com.google.android.gms.wallet.fragment.SupportWalletFragment;
+import com.google.android.gms.wallet.fragment.WalletFragmentStyle;
 import com.jakewharton.rxbinding.view.RxView;
 import com.stripe.android.Stripe;
 import com.stripe.android.model.Card;
@@ -33,6 +40,7 @@ import com.stripe.android.model.SourceParams;
 import com.stripe.android.view.CardInputWidget;
 import com.stripe.wrap.pay.AndroidPayConfiguration;
 import com.stripe.wrap.pay.activity.StripeAndroidPayActivity;
+import com.stripe.wrap.pay.utils.CartContentException;
 import com.stripe.wrap.pay.utils.CartManager;
 import com.stripe.wrap.pay.utils.PaymentUtils;
 
@@ -52,8 +60,8 @@ import rx.subscriptions.CompositeSubscription;
 
 public class PaymentActivity extends StripeAndroidPayActivity {
 
-    private static final String EXTRA_CART = "EXTRA_CART";
     private static final String TOTAL_LABEL = "Total:";
+    private static final Locale LOC = Locale.US;
 
     private CartManager mCartManager;
     private CardInputWidget mCardInputWidget;
@@ -61,32 +69,26 @@ public class PaymentActivity extends StripeAndroidPayActivity {
     private ProgressDialogFragment mProgressDialogFragment;
     private Stripe mStripe;
 
+    private View mAndroidPayGroupContainer;
+    private View mAndroidPayDetailsContainer;
+    private View mAndroidPayButtonContainer;
+    private View mAndroidPayConfirmationContainer;
+
+    private TextView mTvAndroidPayCard;
+    private TextView mTvAndroidPayAddress;
+    private TextView mTvOr;
+
     private LinearLayout mCartItemLayout;
+
+    private MaskedWallet mPotentialMaskedWallet;
+    private String mCurrentShippingKey;
+    private Button mChangeAndroidPayButton;
+    private Button mConfirmPaymentButton;
 
     public static Intent createIntent(@NonNull Context context, @NonNull Cart cart) {
         Intent intent = new Intent(context, PaymentActivity.class);
-        intent.putExtra(EXTRA_CART, cart);
+        intent.putExtra(StripeAndroidPayActivity.EXTRA_CART, cart);
         return intent;
-    }
-
-    @Override
-    protected void onAndroidPayAvailable() {
-
-    }
-
-    @Override
-    protected void onAndroidPayNotAvailable() {
-
-    }
-
-    @Override
-    protected void onMaskedWalletRetrieved(@Nullable MaskedWallet maskedWallet) {
-        super.onMaskedWalletRetrieved(maskedWallet);
-    }
-
-    @Override
-    protected void onChangedMaskedWalletRetrieved(@Nullable MaskedWallet maskedWallet) {
-        super.onChangedMaskedWalletRetrieved(maskedWallet);
     }
 
     @Override
@@ -107,15 +109,19 @@ public class PaymentActivity extends StripeAndroidPayActivity {
         mProgressDialogFragment =
                 ProgressDialogFragment.newInstance(R.string.completing_purchase);
 
-        Button payButton = (Button) findViewById(R.id.btn_purchase);
-        Long price = mCartManager.getTotalPrice();
+        mAndroidPayGroupContainer = findViewById(R.id.group_android_pay);
+        mAndroidPayDetailsContainer = findViewById(R.id.group_android_pay_details);
+        mAndroidPayButtonContainer = findViewById(R.id.android_pay_button_container);
+        mAndroidPayConfirmationContainer = findViewById(R.id.android_pay_confirmation_container);
+        mTvAndroidPayAddress = (TextView) findViewById(R.id.tv_android_pay_address);
+        mTvAndroidPayCard = (TextView) findViewById(R.id.tv_android_pay_card);
+        mTvOr = (TextView) findViewById(R.id.tv_cart_or);
+        mChangeAndroidPayButton = (Button) findViewById(R.id.btn_android_pay_change);
 
-        if (price != null) {
-            payButton.setText(String.format(Locale.ENGLISH,
-                    "Pay %s", StoreUtils.getPriceString(price, null)));
-        }
+        mConfirmPaymentButton = (Button) findViewById(R.id.btn_purchase);
+        updateConfirmPaymentButton();
 
-        RxView.clicks(payButton)
+        RxView.clicks(mConfirmPaymentButton)
                 .subscribe(new Action1<Void>() {
                     @Override
                     public void call(Void aVoid) {
@@ -123,18 +129,154 @@ public class PaymentActivity extends StripeAndroidPayActivity {
                     }
                 });
 
+        RxView.clicks(mChangeAndroidPayButton)
+                .subscribe(new Action1<Void>() {
+                    @Override
+                    public void call(Void aVoid) {
+                        createAndAddConfirmationWalletFragment(mPotentialMaskedWallet);
+                    }
+                });
+
         mStripe = new Stripe(this);
+        mAndroidPayDetailsContainer.setVisibility(View.GONE);
+    }
+
+    @Override
+    protected void onAndroidPayAvailable() {
+        mAndroidPayGroupContainer.setVisibility(View.VISIBLE);
+        mTvOr.setVisibility(View.VISIBLE);
+    }
+
+    @Override
+    protected void onAndroidPayNotAvailable() {
+        mAndroidPayGroupContainer.setVisibility(View.GONE);
+        mTvOr.setVisibility(View.GONE);
+    }
+
+    @Override
+    protected void addBuyButtonWalletFragment(@NonNull SupportWalletFragment walletFragment) {
+        FragmentTransaction buttonTransaction = getSupportFragmentManager().beginTransaction();
+        buttonTransaction.add(R.id.android_pay_button_container, walletFragment).commit();
+    }
+
+    @Override
+    protected void addConfirmationWalletFragment(@NonNull SupportWalletFragment walletFragment) {
+        mAndroidPayConfirmationContainer.setVisibility(View.VISIBLE);
+        FragmentTransaction confirmationTransaction =
+                getSupportFragmentManager().beginTransaction();
+        Slide slide = new Slide(Gravity.TOP);
+        //android.R.transition.slide_bottom
+        walletFragment.setEnterTransition(slide);
+        confirmationTransaction.replace(R.id.android_pay_confirmation_container, walletFragment)
+                .commit();
+    }
+
+    @NonNull
+    @Override
+    protected WalletFragmentStyle getWalletFragmentConfirmationStyle() {
+        return new WalletFragmentStyle()
+                .setMaskedWalletDetailsLogoImageType(WalletFragmentStyle.LogoImageType.ANDROID_PAY)
+                .setStyleResourceId(R.style.AppTheme)
+                .setMaskedWalletDetailsTextAppearance(
+                        android.R.style.TextAppearance_DeviceDefault_Medium)
+                .setMaskedWalletDetailsHeaderTextAppearance(
+                        android.R.style.TextAppearance_DeviceDefault_Large);
+    }
+
+    @Override
+    protected void onMaskedWalletRetrieved(@Nullable MaskedWallet maskedWallet) {
+        super.onMaskedWalletRetrieved(maskedWallet);
+        if (maskedWallet == null) {
+            return;
+        }
+
+        mPotentialMaskedWallet = maskedWallet;
+        updatePaymentInformation(mPotentialMaskedWallet);
+        updateShippingAndTax(mPotentialMaskedWallet);
+
+        try {
+            mCart = mCartManager.buildCart();
+            updateCartTotals();
+            updateConfirmPaymentButton();
+        } catch (CartContentException unexpected) {
+            // ignore for now
+        }
+    }
+
+    private void updatePaymentInformation(@NonNull MaskedWallet maskedWallet) {
+        mAndroidPayDetailsContainer.setVisibility(View.VISIBLE);
+        if (maskedWallet.getPaymentDescriptions() != null
+                && maskedWallet.getPaymentDescriptions().length > 0) {
+            String cardText = String.format(LOC, "Card: %s", maskedWallet.getPaymentDescriptions()[0]);
+            mTvAndroidPayCard.setText(cardText);
+        }
+
+        if (maskedWallet.getBuyerShippingAddress() != null) {
+            mTvAndroidPayAddress.setText(maskedWallet.getBuyerShippingAddress().getAddress1());
+        }
+    }
+
+    private void updateShippingAndTax(@NonNull MaskedWallet maskedWallet) {
+        UserAddress shippingAddress = maskedWallet.getBuyerShippingAddress();
+        UserAddress billingAddress = maskedWallet.getBuyerBillingAddress();
+        if (mCurrentShippingKey != null) {
+            mCartManager.removeLineItem(mCurrentShippingKey);
+            mCurrentShippingKey = null;
+        }
+
+        mCurrentShippingKey = mCartManager.addShippingLineItem("Shipping", determineShippingCost(shippingAddress));
+        mCartManager.setTaxLineItem("Tax", determineTax(billingAddress));
+    }
+
+    private void updateCartTotals() {
+        addCartItems();
+
+    }
+
+    private void updateConfirmPaymentButton() {
+        Long price = mCartManager.getTotalPrice();
+
+        if (price != null) {
+            mConfirmPaymentButton.setText(String.format(Locale.ENGLISH,
+                    "Pay %s", StoreUtils.getPriceString(price, null)));
+        }
+    }
+
+    @Override
+    protected void onChangedMaskedWalletRetrieved(@Nullable MaskedWallet maskedWallet) {
+        super.onChangedMaskedWalletRetrieved(maskedWallet);
+        mAndroidPayConfirmationContainer.setVisibility(View.GONE);
+
+        if (maskedWallet == null) {
+            return;
+        }
+
+        mPotentialMaskedWallet = maskedWallet;
+        updatePaymentInformation(mPotentialMaskedWallet);
+        updateShippingAndTax(mPotentialMaskedWallet);
+
+        try {
+            mCart = mCartManager.buildCart();
+            updateCartTotals();
+            updateConfirmPaymentButton();
+        } catch (CartContentException unexpected) {
+            // ignore for now
+        }
     }
 
     private void addCartItems() {
         mCartItemLayout.removeAllViewsInLayout();
         String currencySymbol = AndroidPayConfiguration.getInstance()
                 .getCurrency().getSymbol(Locale.US);
-        for (LineItem item : mCartManager.getLineItemsRegular().values()) {
-            View view = LayoutInflater.from(this).inflate(
-                    R.layout.cart_item, mCartItemLayout, false);
-            fillOutCartItemView(item, view, currencySymbol);
-            mCartItemLayout.addView(view);
+
+        Collection<LineItem> items = mCartManager.getLineItemsRegular().values();
+        addLineItems(currencySymbol, items.toArray(new LineItem[items.size()]));
+
+        items = mCartManager.getLineItemsShipping().values();
+        addLineItems(currencySymbol, items.toArray(new LineItem[items.size()]));
+
+        if (mCartManager.getLineItemTax() != null) {
+            addLineItems(currencySymbol, mCartManager.getLineItemTax());
         }
 
         View totalView = LayoutInflater.from(this).inflate(
@@ -143,6 +285,29 @@ public class PaymentActivity extends StripeAndroidPayActivity {
         if (shouldDisplayTotal) {
             mCartItemLayout.addView(totalView);
         }
+    }
+
+    private void addLineItems(String currencySymbol, LineItem... items) {
+        for (LineItem item : items) {
+            View view = LayoutInflater.from(this).inflate(
+                    R.layout.cart_item, mCartItemLayout, false);
+            fillOutCartItemView(item, view, currencySymbol);
+            mCartItemLayout.addView(view);
+        }
+    }
+
+    private long determineShippingCost(UserAddress address) {
+        if (address == null) {
+            return 200L;
+        }
+        return address.getAddress1().length() * 7L;
+    }
+
+    private long determineTax(UserAddress address) {
+        if (address == null) {
+            return 200L;
+        }
+        return address.getAddress1().length() * 3L;
     }
 
     private boolean fillOutTotalView(View view, String currencySymbol) {

@@ -156,6 +156,7 @@ public class AndroidPayActivity extends StripeAndroidPayActivity {
 
     @Override
     protected void onMaskedWalletRetrieved(@Nullable MaskedWallet maskedWallet) {
+        super.onMaskedWalletRetrieved(maskedWallet);
         if (maskedWallet != null) {
             mPossibleConfirmedMaskedWallet = maskedWallet;
 

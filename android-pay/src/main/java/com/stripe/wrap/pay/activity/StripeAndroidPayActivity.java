@@ -514,7 +514,10 @@ public abstract class StripeAndroidPayActivity extends AppCompatActivity
      *
      * @param maskedWallet the {@link MaskedWallet} returned from the {@link GoogleApiClient}
      */
-    protected void onMaskedWalletRetrieved(@Nullable MaskedWallet maskedWallet) { }
+    @CallSuper
+    protected void onMaskedWalletRetrieved(@Nullable MaskedWallet maskedWallet) {
+        mBuyButtonFragment.updateMaskedWallet(maskedWallet);
+    }
 
     /**
      * Override this function to move to {@link WalletConstants#ENVIRONMENT_PRODUCTION}

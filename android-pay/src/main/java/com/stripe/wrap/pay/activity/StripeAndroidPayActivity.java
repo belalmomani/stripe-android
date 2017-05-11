@@ -56,77 +56,77 @@ import java.util.concurrent.Executors;
  * connection states, simplifying the required work to display and complete an Android Pay purchase.
  */
 public abstract class StripeAndroidPayActivity extends AppCompatActivity
-        implements GoogleApiClient.OnConnectionFailedListener {
-
+implements GoogleApiClient.OnConnectionFailedListener {
+    
     public static final String TAG = StripeAndroidPayActivity.class.getName();
-
+    
     public static final String EXTRA_ACCOUNT_NAME = "extra_account_name";
     public static final String EXTRA_CART = "extra_cart";
     public static final String EXTRA_MASKED_WALLET = "extra_masked_wallet";
-
+    
     // Request code to use when requesting the Masked Wallet.
     public static final int REQUEST_CODE_MASKED_WALLET = 2002;
-
+    
     // Request code to use when allowing the user to change before confirming the Masked Wallet.
     public static final int REQUEST_CODE_CHANGE_MASKED_WALLET = 3003;
-
+    
     // Request code to use when requesting the Full Wallet.
     public static final int REQUEST_CODE_LOAD_FULL_WALLET = 4004;
-
+    
     // Request code to use when launching the resolution activity
     private static final int REQUEST_RESOLVE_ERROR = 1001;
     // Unique tag for the error dialog fragment
     private static final String DIALOG_ERROR = "dialog_error";
     private static final String STATE_RESOLVING_ERROR = "resolving_error";
-
+    
     // Bool to track whether the app is already resolving an error
     private boolean mResolvingError = false;
     @NonNull private Executor mExecutor = Executors.newFixedThreadPool(3);
-
+    
     private String mAccountName;
     private Cart mCart;
     private GoogleApiClient mGoogleApiClient;
     private MaskedWallet mMaskedWallet;
     private SupportWalletFragment mBuyButtonFragment;
-
+    
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
+        
         mResolvingError = savedInstanceState != null
-                && savedInstanceState.getBoolean(STATE_RESOLVING_ERROR, false);
-
+        && savedInstanceState.getBoolean(STATE_RESOLVING_ERROR, false);
+        
         if (getIntent().hasExtra(EXTRA_CART)) {
             mCart = getIntent().getParcelableExtra(EXTRA_CART);
         }
-
+        
         if (getIntent().hasExtra(EXTRA_ACCOUNT_NAME)) {
             mAccountName = getIntent().getStringExtra(EXTRA_ACCOUNT_NAME);
         }
-
+        
         if (getIntent().hasExtra(EXTRA_MASKED_WALLET)) {
             mMaskedWallet = getIntent().getParcelableExtra(EXTRA_MASKED_WALLET);
         }
-
+        
         mGoogleApiClient = buildGoogleApiClient();
-
+        
         onBeforeAndroidPayAvailable();
         verifyAndPrepareAndroidPayControls(mGoogleApiClient,
-                PaymentUtils.getStripeIsReadyToPayRequest());
+                                           PaymentUtils.getStripeIsReadyToPayRequest());
     }
-
+    
     @Override
     protected void onStart() {
         super.onStart();
         mGoogleApiClient.connect();
     }
-
+    
     @Override
     protected void onStop() {
         super.onStop();
         mGoogleApiClient.disconnect();
     }
-
+    
     @CallSuper
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -151,7 +151,7 @@ public abstract class StripeAndroidPayActivity extends AppCompatActivity
                     case RESULT_OK:
                         if (data != null) {
                             MaskedWallet maskedWallet =
-                                    data.getParcelableExtra(WalletConstants.EXTRA_MASKED_WALLET);
+                            data.getParcelableExtra(WalletConstants.EXTRA_MASKED_WALLET);
                             if (maskedWallet != null) {
                                 onMaskedWalletRetrieved(maskedWallet);
                                 if (mBuyButtonFragment != null) {
@@ -172,7 +172,7 @@ public abstract class StripeAndroidPayActivity extends AppCompatActivity
                     case RESULT_OK:
                         if (data != null) {
                             MaskedWallet maskedWallet =
-                                    data.getParcelableExtra(WalletConstants.EXTRA_MASKED_WALLET);
+                            data.getParcelableExtra(WalletConstants.EXTRA_MASKED_WALLET);
                             if (maskedWallet != null) {
                                 onChangedMaskedWalletRetrieved(maskedWallet);
                                 if (mBuyButtonFragment != null) {
@@ -193,7 +193,7 @@ public abstract class StripeAndroidPayActivity extends AppCompatActivity
                     case RESULT_OK:
                         if (data != null && data.hasExtra(WalletConstants.EXTRA_FULL_WALLET)) {
                             FullWallet fullWallet =
-                                    data.getParcelableExtra(WalletConstants.EXTRA_FULL_WALLET);
+                            data.getParcelableExtra(WalletConstants.EXTRA_FULL_WALLET);
                             // the full wallet can now be used to process the customer's payment
                             // send the wallet info up to server to process, and to get the result
                             // for sending a transaction status
@@ -214,32 +214,32 @@ public abstract class StripeAndroidPayActivity extends AppCompatActivity
                 break;
         }
     }
-
+    
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
         outState.putBoolean(STATE_RESOLVING_ERROR, mResolvingError);
     }
-
+    
     protected void verifyAndPrepareAndroidPayControls(
-            @NonNull GoogleApiClient googleApiClient,
-            @NonNull IsReadyToPayRequest isReadyToPayRequest) {
+                                                      @NonNull GoogleApiClient googleApiClient,
+                                                      @NonNull IsReadyToPayRequest isReadyToPayRequest) {
         Wallet.Payments.isReadyToPay(googleApiClient, isReadyToPayRequest)
-                .setResultCallback(
-                        new ResultCallback<BooleanResult>() {
-                            @Override
-                            public void onResult(@NonNull BooleanResult booleanResult) {
-                                onAfterAndroidPayCheckComplete();
-                                if (booleanResult.getStatus().isSuccess()
-                                        && booleanResult.getValue()) {
-                                    createAndAddBuyButtonWalletFragment();
-                                } else {
-                                    onAndroidPayNotAvailable();
-                                }
-                            }
-                        });
+        .setResultCallback(
+                           new ResultCallback<BooleanResult>() {
+                               @Override
+                               public void onResult(@NonNull BooleanResult booleanResult) {
+                                   onAfterAndroidPayCheckComplete();
+                                   if (booleanResult.getStatus().isSuccess()
+                                       && booleanResult.getValue()) {
+                                       createAndAddBuyButtonWalletFragment();
+                                   } else {
+                                       onAndroidPayNotAvailable();
+                                   }
+                               }
+                           });
     }
-
+    
     /**
      * Call to make a final payment request to Google Play Services.
      *
@@ -247,11 +247,11 @@ public abstract class StripeAndroidPayActivity extends AppCompatActivity
      */
     protected void loadFullWallet(@NonNull FullWalletRequest fullWalletRequest) {
         Wallet.Payments.loadFullWallet(
-                mGoogleApiClient,
-                fullWalletRequest,
-                REQUEST_CODE_LOAD_FULL_WALLET);
+                                       mGoogleApiClient,
+                                       fullWalletRequest,
+                                       REQUEST_CODE_LOAD_FULL_WALLET);
     }
-
+    
     /**
      * Builds the {@link GoogleApiClient} used in this Activity. Override
      * if you'd like to change the default GoogleApiClient.
@@ -261,15 +261,15 @@ public abstract class StripeAndroidPayActivity extends AppCompatActivity
     @NonNull
     protected GoogleApiClient buildGoogleApiClient() {
         return new GoogleApiClient.Builder(this)
-                .addApi(Wallet.API, new Wallet.WalletOptions.Builder()
-                        .setEnvironment(getWalletEnvironment())
-                        .setTheme(getWalletTheme())
-                        .build())
-                .addOnConnectionFailedListener(this)
-                .enableAutoManage(this, this)
-                .build();
+        .addApi(Wallet.API, new Wallet.WalletOptions.Builder()
+                .setEnvironment(getWalletEnvironment())
+                .setTheme(getWalletTheme())
+                .build())
+        .addOnConnectionFailedListener(this)
+        .enableAutoManage(this, this)
+        .build();
     }
-
+    
     /**
      * Creates the {@link WalletFragmentStyle} for the buy button for this Activity.
      * Override to change the appearance of the button. The results of this method
@@ -280,11 +280,11 @@ public abstract class StripeAndroidPayActivity extends AppCompatActivity
     @NonNull
     protected WalletFragmentStyle getWalletFragmentButtonStyle() {
         return new WalletFragmentStyle()
-                .setBuyButtonText(WalletFragmentStyle.BuyButtonText.BUY_WITH)
-                .setBuyButtonAppearance(WalletFragmentStyle.BuyButtonAppearance.ANDROID_PAY_DARK)
-                .setBuyButtonWidth(WalletFragmentStyle.Dimension.MATCH_PARENT);
+        .setBuyButtonText(WalletFragmentStyle.BuyButtonText.BUY_WITH)
+        .setBuyButtonAppearance(WalletFragmentStyle.BuyButtonAppearance.ANDROID_PAY_DARK)
+        .setBuyButtonWidth(WalletFragmentStyle.Dimension.MATCH_PARENT);
     }
-
+    
     /**
      * Creates the {@link WalletFragmentStyle} for the confirmation fragment. Override to change
      * the appearance of the selection details screen. The results of this method
@@ -295,19 +295,19 @@ public abstract class StripeAndroidPayActivity extends AppCompatActivity
     @NonNull
     protected WalletFragmentStyle getWalletFragmentConfirmationStyle() {
         return new WalletFragmentStyle()
-                .setMaskedWalletDetailsLogoImageType(WalletFragmentStyle.LogoImageType.ANDROID_PAY);
+        .setMaskedWalletDetailsLogoImageType(WalletFragmentStyle.LogoImageType.ANDROID_PAY);
     }
-
+    
     @NonNull
     protected WalletFragmentOptions getWalletFragmentOptions(int walletFragmentMode) {
         if (walletFragmentMode != WalletFragmentMode.BUY_BUTTON
-                && walletFragmentMode != WalletFragmentMode.SELECTION_DETAILS) {
+            && walletFragmentMode != WalletFragmentMode.SELECTION_DETAILS) {
             throw new IllegalArgumentException(
-                    String.format(Locale.ENGLISH,
-                            "Using unknown WalletFragmentMode (%d) to create WalletFragment",
-                            walletFragmentMode));
+                                               String.format(Locale.ENGLISH,
+                                                             "Using unknown WalletFragmentMode (%d) to create WalletFragment",
+                                                             walletFragmentMode));
         }
-
+        
         WalletFragmentStyle style;
         if (walletFragmentMode == WalletFragmentMode.BUY_BUTTON) {
             style = getWalletFragmentButtonStyle();
@@ -315,13 +315,13 @@ public abstract class StripeAndroidPayActivity extends AppCompatActivity
             style = getWalletFragmentConfirmationStyle();
         }
         return WalletFragmentOptions.newBuilder()
-                .setEnvironment(getWalletEnvironment())
-                .setFragmentStyle(style)
-                .setTheme(getWalletTheme())
-                .setMode(walletFragmentMode)
-                .build();
+        .setEnvironment(getWalletEnvironment())
+        .setFragmentStyle(style)
+        .setTheme(getWalletTheme())
+        .setMode(walletFragmentMode)
+        .build();
     }
-
+    
     /**
      * Creates the confirmation wallet fragment and calls
      * {@link #addConfirmationWalletFragment(SupportWalletFragment)}. Override this method to
@@ -333,21 +333,21 @@ public abstract class StripeAndroidPayActivity extends AppCompatActivity
      */
     protected void createAndAddConfirmationWalletFragment(@NonNull MaskedWallet maskedWallet) {
         SupportWalletFragment supportWalletFragment = SupportWalletFragment.newInstance(
-                getWalletFragmentOptions(WalletFragmentMode.SELECTION_DETAILS));
-
+                                                                                        getWalletFragmentOptions(WalletFragmentMode.SELECTION_DETAILS));
+        
         WalletFragmentInitParams.Builder startParamsBuilder =
-                WalletFragmentInitParams.newBuilder()
-                        .setMaskedWallet(maskedWallet)
-                        .setMaskedWalletRequestCode(REQUEST_CODE_CHANGE_MASKED_WALLET);
-
+        WalletFragmentInitParams.newBuilder()
+        .setMaskedWallet(maskedWallet)
+        .setMaskedWalletRequestCode(REQUEST_CODE_CHANGE_MASKED_WALLET);
+        
         if (!TextUtils.isEmpty(mAccountName)) {
             startParamsBuilder.setAccountName(mAccountName);
         }
-
+        
         supportWalletFragment.initialize(startParamsBuilder.build());
         addConfirmationWalletFragment(supportWalletFragment);
     }
-
+    
     /**
      * Creates the Buy Button WalletFragment and calls
      * {@link #addBuyButtonWalletFragment(SupportWalletFragment)}. Override this method to
@@ -355,30 +355,30 @@ public abstract class StripeAndroidPayActivity extends AppCompatActivity
      */
     protected void createAndAddBuyButtonWalletFragment() {
         SupportWalletFragment supportWalletFragment = SupportWalletFragment.newInstance(
-                getWalletFragmentOptions(WalletFragmentMode.BUY_BUTTON));
-
+                                                                                        getWalletFragmentOptions(WalletFragmentMode.BUY_BUTTON));
+        
         if (mCart == null) {
             // A masked wallet request must have a cart.
             return;
         }
-
+        
         MaskedWalletRequest maskedWalletRequest =
-                AndroidPayConfiguration.getInstance().generateMaskedWalletRequest(mCart);
-
+        AndroidPayConfiguration.getInstance().generateMaskedWalletRequest(mCart);
+        
         WalletFragmentInitParams.Builder startParamsBuilder =
-                WalletFragmentInitParams.newBuilder()
-                        .setMaskedWalletRequest(maskedWalletRequest)
-                        .setMaskedWalletRequestCode(REQUEST_CODE_MASKED_WALLET);
-
+        WalletFragmentInitParams.newBuilder()
+        .setMaskedWalletRequest(maskedWalletRequest)
+        .setMaskedWalletRequestCode(REQUEST_CODE_MASKED_WALLET);
+        
         if (!TextUtils.isEmpty(mAccountName)) {
             startParamsBuilder.setAccountName(mAccountName);
         }
-
+        
         supportWalletFragment.initialize(startParamsBuilder.build());
         mBuyButtonFragment = supportWalletFragment;
         addBuyButtonWalletFragment(mBuyButtonFragment);
     }
-
+    
     /**
      * Handles receipt of a {@link FullWallet} from Google Play Services. This wallet includes
      * the {@link StripePaymentSource} (usually a {@link Token}). If that payment source is not
@@ -392,37 +392,37 @@ public abstract class StripeAndroidPayActivity extends AppCompatActivity
         if (fullWallet == null || fullWallet.getPaymentMethodToken() == null) {
             return;
         }
-
+        
         String rawPurchaseToken = fullWallet.getPaymentMethodToken().getToken();
         if (rawPurchaseToken == null) {
             Log.w(TAG, "Null token returned with non-null full wallet");
         }
-
+        
         try {
             Token token = TokenParser.parseToken(rawPurchaseToken);
             logApiCallOnNewThread(token, null);
             onStripePaymentSourceReturned(fullWallet, token);
         } catch (JSONException jsonException) {
             Log.i(TAG,
-                    String.format(Locale.ENGLISH,
-                            "Could not parse object as Stripe token. Trying as Source.\n%s",
-                            rawPurchaseToken),
-                    jsonException);
+                  String.format(Locale.ENGLISH,
+                                "Could not parse object as Stripe token. Trying as Source.\n%s",
+                                rawPurchaseToken),
+                  jsonException);
             Source source = Source.fromString(rawPurchaseToken);
-
+            
             if (source == null) {
                 Log.w(TAG,
-                        String.format(Locale.ENGLISH,
-                                "Could not parse object as Stripe Source\n%s",
-                                rawPurchaseToken),
-                        jsonException);
+                      String.format(Locale.ENGLISH,
+                                    "Could not parse object as Stripe Source\n%s",
+                                    rawPurchaseToken),
+                      jsonException);
                 return;
             }
             logApiCallOnNewThread(source, null);
             onStripePaymentSourceReturned(fullWallet, source);
         }
     }
-
+    
     /**
      * Update the Buy Button fragment's wallet. Call this method if the user changes payment
      * methods or updates other details, like shipping address.
@@ -434,28 +434,28 @@ public abstract class StripeAndroidPayActivity extends AppCompatActivity
             mBuyButtonFragment.updateMaskedWallet(maskedWallet);
         }
     }
-
+    
     @Nullable
     protected SupportWalletFragment getBuyButtonFragment() {
         return mBuyButtonFragment;
     }
-
+    
     @Nullable
     protected GoogleApiClient getGoogleApiClient() {
         return mGoogleApiClient;
     }
-
+    
     @Nullable
     protected Cart getCart() {
         return mCart;
     }
-
+    
     protected void setCart(@NonNull Cart cart) {
         mCart = cart;
     }
-
+    
     /*------ Begin GoogleApiClient.OnConnectionFailedListener ------*/
-
+    
     /**
      * Handles the error conditions for connection issues with the {@link GoogleApiClient}.
      * Deliberately mimics the behavior of enableAutoManage.
@@ -481,9 +481,9 @@ public abstract class StripeAndroidPayActivity extends AppCompatActivity
             mResolvingError = true;
         }
     }
-
+    
     /*------ End GoogleApiClient.OnConnectionFailedListener ------*/
-
+    
     /* Creates a dialog for an error message */
     private void showErrorDialog(int errorCode) {
         // Create a fragment for the error dialog
@@ -494,35 +494,35 @@ public abstract class StripeAndroidPayActivity extends AppCompatActivity
         dialogFragment.setArguments(args);
         dialogFragment.show(getSupportFragmentManager(), "errordialog");
     }
-
+    
     /* Called from ErrorDialogFragment when the dialog is dismissed. */
     public void onDialogDismissed() {
         mResolvingError = false;
     }
-
+    
     /*------ Required Overrides ------*/
-
+    
     protected abstract void onAndroidPayAvailable();
     protected abstract void onAndroidPayNotAvailable();
-
+    
     /*------ Optional Overrides ------*/
-
+    
     protected void onBeforeAndroidPayAvailable() {
         // This is a good place to display a spinner if you anticipate delays
         // initializing the Google API client.
     }
-
+    
     protected void onAfterAndroidPayCheckComplete() {
         // If a spinner was showing, remove it in this method.
     }
-
+    
     /**
      * Override to handle Google errors in custom ways.
      *
      * @param errorCode the error code returned from the {@link GoogleApiClient}
      */
     protected void handleError(int errorCode) { }
-
+    
     /**
      * Override this method to display the Android Pay confirmation wallet fragment. Place
      * it in a container of your choice using a {@link android.support.v4.app.FragmentTransaction}.
@@ -530,7 +530,7 @@ public abstract class StripeAndroidPayActivity extends AppCompatActivity
      * @param walletFragment a {@link SupportWalletFragment} created using the
      */
     protected void addConfirmationWalletFragment(@NonNull SupportWalletFragment walletFragment) { }
-
+    
     /**
      * Override this method to display the Android Pay fragment (a clickable button). Place
      * it in a container of your choice using a {@link android.support.v4.app.FragmentTransaction}.
@@ -538,7 +538,7 @@ public abstract class StripeAndroidPayActivity extends AppCompatActivity
      * @param walletFragment a {@link SupportWalletFragment} created using the
      */
     protected void addBuyButtonWalletFragment(@NonNull SupportWalletFragment walletFragment) { }
-
+    
     /**
      * Override this method to react to a {@link MaskedWallet} being returned from the Google API
      * when the user is asked to confirm wallet choices.
@@ -550,13 +550,13 @@ public abstract class StripeAndroidPayActivity extends AppCompatActivity
         if (maskedWallet == null) {
             return;
         }
-
+        
         if (mBuyButtonFragment != null) {
             mBuyButtonFragment.updateMaskedWallet(maskedWallet);
         }
         mMaskedWallet = maskedWallet;
     }
-
+    
     /**
      * Override this method to react to a {@link MaskedWallet} being returned from
      * the Google API. The masked wallet will have the user's shipping information (if
@@ -572,7 +572,7 @@ public abstract class StripeAndroidPayActivity extends AppCompatActivity
         }
         mMaskedWallet = maskedWallet;
     }
-
+    
     /**
      * Override this function to move to {@link WalletConstants#ENVIRONMENT_PRODUCTION}
      *
@@ -581,7 +581,7 @@ public abstract class StripeAndroidPayActivity extends AppCompatActivity
     protected int getWalletEnvironment() {
         return WalletConstants.ENVIRONMENT_TEST;
     }
-
+    
     /**
      * Override this function to change the theme of Wallet display items
      *
@@ -590,7 +590,7 @@ public abstract class StripeAndroidPayActivity extends AppCompatActivity
     protected int getWalletTheme() {
         return WalletConstants.THEME_LIGHT;
     }
-
+    
     /**
      * Called when a {@link StripePaymentSource} is returned from Google's servers.
      * Send the ID of this payment source to your server to make a charge. This payment source will
@@ -601,58 +601,58 @@ public abstract class StripeAndroidPayActivity extends AppCompatActivity
      *                      to make a charge
      */
     protected void onStripePaymentSourceReturned(
-            FullWallet wallet, StripePaymentSource paymentSource) { }
-
+                                                 FullWallet wallet, StripePaymentSource paymentSource) { }
+    
     /*------ End Overrides ------*/
-
+    
     @VisibleForTesting
     void setExecutor(@NonNull Executor executor) {
         mExecutor = executor;
     }
-
+    
     @VisibleForTesting
     void logApiCallOnNewThread(@NonNull StripePaymentSource paymentSource,
                                @Nullable final StripeApiHandler.LoggingResponseListener listener) {
         @LoggingUtils.LoggingEventName String eventName =
-                paymentSource instanceof Token
-                        ? LoggingUtils.EVENT_TOKEN_CREATION
-                        : LoggingUtils.EVENT_SOURCE_CREATION;
-
+        paymentSource instanceof Token
+        ? LoggingUtils.EVENT_TOKEN_CREATION
+        : LoggingUtils.EVENT_SOURCE_CREATION;
+        
         List<String> loggingTokens = Arrays.asList(LoggingUtils.ANDROID_PAY_TOKEN);
         String publishableKey = AndroidPayConfiguration.getInstance().getPublicApiKey();
-
+        
         final Map<String, Object> loggingParams = LoggingUtils.getEventLoggingParams(
-                loggingTokens,
-                null,
-                publishableKey,
-                eventName);
+                                                                                     loggingTokens,
+                                                                                     null,
+                                                                                     publishableKey,
+                                                                                     eventName);
         final RequestOptions options = RequestOptions.builder(publishableKey).build();
-
+        
         Runnable runnable = new Runnable() {
             @Override
             public void run() {
                 StripeApiHandler.logApiCall(
-                        loggingParams,
-                        options,
-                        listener);
+                                            loggingParams,
+                                            options,
+                                            listener);
             }
         };
-
+        
         mExecutor.execute(runnable);
     }
-
+    
     /* A fragment to display an error dialog */
     public static class ErrorDialogFragment extends DialogFragment {
         public ErrorDialogFragment() { }
-
+        
         @Override
         public Dialog onCreateDialog(Bundle savedInstanceState) {
             // Get the error code and retrieve the appropriate dialog
             int errorCode = this.getArguments().getInt(DIALOG_ERROR);
             return GoogleApiAvailability.getInstance().getErrorDialog(
-                    this.getActivity(), errorCode, REQUEST_RESOLVE_ERROR);
+                                                                      this.getActivity(), errorCode, REQUEST_RESOLVE_ERROR);
         }
-
+        
         @Override
         public void onDismiss(DialogInterface dialog) {
             ((StripeAndroidPayActivity) getActivity()).onDialogDismissed();

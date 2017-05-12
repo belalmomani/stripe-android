@@ -164,9 +164,11 @@ public class PaymentActivity extends StripeAndroidPayActivity {
         mAndroidPayConfirmationContainer.setVisibility(View.VISIBLE);
         FragmentTransaction confirmationTransaction =
                 getSupportFragmentManager().beginTransaction();
-        Slide slide = new Slide(Gravity.TOP);
+        Slide slide = new Slide(Gravity.BOTTOM);
+        Slide exitSlide = new Slide(Gravity.TOP);
         //android.R.transition.slide_bottom
         walletFragment.setEnterTransition(slide);
+        walletFragment.setExitTransition(exitSlide);
         confirmationTransaction.replace(R.id.android_pay_confirmation_container, walletFragment)
                 .commit();
     }

@@ -58,12 +58,30 @@
                         android:layout_height="wrap_content"
                         />
 
-                    <Button
-                        android:id="@+id/btn_android_pay_change"
-                        android:layout_width="wrap_content"
+                    <LinearLayout
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/change_card"
-                        />
+                        android:gravity="center_horizontal"
+                        android:orientation="horizontal">
+
+                        <Button
+                            android:id="@+id/btn_android_pay_change"
+                            android:layout_width="@dimen/button_side"
+                            android:layout_height="wrap_content"
+                            android:text="@string/change_card"
+                            />
+
+                        <Button
+                            android:id="@+id/btn_android_pay_confirm"
+                            android:layout_marginLeft="@dimen/payment_screen_spacing"
+                            android:layout_marginStart="@dimen/payment_screen_spacing"
+                            android:layout_width="@dimen/button_side"
+                            android:layout_height="wrap_content"
+                            android:text="@string/confirm_purchase"
+                            />
+
+                    </LinearLayout>
+
 
                 </LinearLayout>
 

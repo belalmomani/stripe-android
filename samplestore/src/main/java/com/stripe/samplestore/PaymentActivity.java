@@ -195,7 +195,7 @@ public class PaymentActivity extends StripeAndroidPayActivity {
         updateShippingAndTax(mPotentialMaskedWallet);
 
         try {
-            mCart = mCartManager.buildCart();
+            setCart(mCartManager.buildCart());
             updateCartTotals();
             updateConfirmPaymentButton();
         } catch (CartContentException unexpected) {
@@ -256,7 +256,7 @@ public class PaymentActivity extends StripeAndroidPayActivity {
         updateShippingAndTax(mPotentialMaskedWallet);
 
         try {
-            mCart = mCartManager.buildCart();
+            setCart(mCartManager.buildCart());
             updateCartTotals();
             updateConfirmPaymentButton();
         } catch (CartContentException unexpected) {

@@ -118,6 +118,7 @@
         android:id="@+id/android_pay_confirmation_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginBottom="@dimen/activity_padding"
         android:background="@android:color/white"
         />
 

@@ -192,6 +192,8 @@ public class PaymentActivity extends StripeAndroidPayActivity {
             return;
         }
 
+        mAndroidPayButtonContainer.setVisibility(View.GONE);
+
         mPotentialMaskedWallet = maskedWallet;
         updatePaymentInformation(mPotentialMaskedWallet);
         updateShippingAndTax(mPotentialMaskedWallet);

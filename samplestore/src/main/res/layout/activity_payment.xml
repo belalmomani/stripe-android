@@ -44,6 +44,7 @@
                     android:orientation="vertical"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:gravity="center_horizontal"
                     >
 
                     <TextView
@@ -61,22 +62,25 @@
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:gravity="center_horizontal"
+                        android:gravity="center"
                         android:orientation="horizontal">
 
                         <Button
                             android:id="@+id/btn_android_pay_change"
-                            android:layout_width="@dimen/button_side"
+                            android:layout_width="0dp"
                             android:layout_height="wrap_content"
+                            android:layout_weight="1"
                             android:text="@string/change_card"
                             />
 
                         <Button
                             android:id="@+id/btn_android_pay_confirm"
-                            android:layout_marginLeft="@dimen/payment_screen_spacing"
-                            android:layout_marginStart="@dimen/payment_screen_spacing"
-                            android:layout_width="@dimen/button_side"
+                            android:layout_width="0dp"
                             android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="@dimen/payment_screen_spacing"
+                            android:paddingLeft="10dp"
+                            android:paddingRight="10dp"
                             android:text="@string/confirm_purchase"
                             />
 
